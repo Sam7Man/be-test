@@ -1,13 +1,108 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 generator client {
-  provider        = "prisma-client-js"
+  provider = "prisma-client-js"
+
+  // output   = "./src/prisma/client"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./db.sql"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-model Todo {
-  id String @id @default(cuid())
-  @@map("todos")
+// Terdapat kekurangan detail pada gambar ERD dari test yang diberikan,
+// dimana ada beberapa model yang tidak dijelaskan secara detail 
+// dan tidak memiliki relation terhadap model User sehingga saya
+// berasusmi dan menambahkan relation terhadap model tersebut.
+
+// User model
+model User {
+  id             String       @id @default(uuid())
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime?    @updatedAt
+  lastActivityAt DateTime?
+  email          String       @unique
+  emailVerified  DateTime?
+  name           String
+  password       String
+  workspace      Workspace?    @relation(fields: [workspaceId], references: [id])
+  workspaceId    String?       
+  role           UserRoleEnum
+  sessions       Session[]
+  accounts       Account[]
+  apiTokens      ApiToken[]
+}
+
+// UserRoleEnum for User roles
+enum UserRoleEnum {
+  ADMIN
+  USER
+}
+
+// Asumsi Workspace model
+model Workspace {
+  id        String    @id @default(uuid())
+  name      String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime? @updatedAt
+  user      User[]
+}
+
+// Asumsi Session model
+model Session {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  expiredAt DateTime
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+// Asumsi Account model
+model Account {
+  id           String    @id @default(uuid())
+  accountLogin String    // sebagai multiple login (Google, FB, X, dsb)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime? @updatedAt
+  userId       String
+  user         User      @relation(fields: [userId], references: [id])
+}
+
+// Asumsi ApiToken model
+model ApiToken {
+  id     String       @id @default(uuid())
+  token  String       @unique
+  role   UserRoleEnum
+  userId String
+  user   User         @relation(fields: [userId], references: [id])
+}
+
+model Contact {
+  id          String        @id @default(uuid())
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime?     @updatedAt
+  workspaceId String?
+  name        String
+  phoneNumber String
+  email       String
+  address     String
+  contactList ContactList[]
+}
+
+model ContactList {
+  id             String       @id @default(uuid())
+  contactGroupId String
+  contactId      String
+  contactGroup   ContactGroup @relation(fields: [contactGroupId], references: [id])
+  contact        Contact      @relation(fields: [contactId], references: [id])
+}
+
+model ContactGroup {
+  id           String        @id @default(uuid())
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime?     @updatedAt
+  name         String
+  description  String
+  contactLists ContactList[]
 }
